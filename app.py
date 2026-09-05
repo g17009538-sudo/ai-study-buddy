@@ -10,8 +10,8 @@ api_key = st.text_input("Apni Google Gemini API Key yahan paste karo:", type="pa
 
 if api_key:
     genai.configure(api_key=api_key)
-    # Using the most stable model name
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Model name fixed here
+    model = genai.GenerativeModel('gemini-pro')
     
     uploaded_file = st.file_uploader("Apne PDF notes upload karo", type="pdf")
 
