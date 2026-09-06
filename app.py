@@ -3,106 +3,133 @@ import google.generativeai as genai
 import PyPDF2
 from PIL import Image
 
-# App UI aur Sidebar Setup
+# 1. App UI & Custom Design (Peach & Orange Theme)
 st.set_page_config(page_title="AI Study Tutor", page_icon="🎓", layout="wide")
-st.title("🎓 Smart AI Study Tutor")
 
+st.markdown("""
+<style>
+    /* Main Background - Soft Peach */
+    .stApp {
+        background-color: #FEF5F0;
+    }
+    
+    /* Sidebar Design */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 2px solid #F48024;
+    }
+    
+    /* Buttons Customization */
+    .stButton>button {
+        border-radius: 20px;
+        border: 1px solid #F48024;
+        color: #F48024;
+    }
+    .stButton>button:hover {
+        background-color: #F48024;
+        color: white;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# 2. API Setup
 try:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    
-    # Error ke hisaab se ekdum latest aur working model yahan set kiya hai
+    # Using the exact model version requested by Google API
     model = genai.GenerativeModel('gemini-3.6-flash')
-
-except KeyError:
-    st.error("⚠️ Background mein API key set nahi hai. Kripya Streamlit Secrets check karein.")
-    st.stop()
 except Exception as e:
-    st.error(f"⚠️ Error: {e}")
+    st.error("⚠️ API key is not set in the background. Please check Streamlit Secrets.")
     st.stop()
 
-# Sidebar: Tools aur Uploads
+# 3. Chat Memory Setup (To remember chat history)
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "Hi! I am your AI Study Tutor. Upload your notes or ask me a question directly! 😊"}]
+if "pdf_text" not in st.session_state:
+    st.session_state.pdf_text = ""
+if "img_data" not in st.session_state:
+    st.session_state.img_data = None
+
+# 4. Sidebar - Tools & Uploads
 with st.sidebar:
-    st.header("📂 Study Material")
-    uploaded_pdf = st.file_uploader("📝 Upload Notes (PDF)", type="pdf")
-    uploaded_img = st.file_uploader("🖼️ Upload Diagram (Image)", type=["png", "jpg", "jpeg"])
+    st.header("📂 Upload Material")
     
-    st.divider()
-    st.header("⚙️ Kya karna hai?")
-    action = st.radio("Apna tool select karo:", ["💬 General Chat", "🖼️ Diagram Explain", "❓ Quiz Banao", "🗂️ Flashcards Banao"])
+    uploaded_pdf = st.file_uploader("📝 Upload Notes (PDF)", type="pdf")
+    if uploaded_pdf:
+        try:
+            pdf_reader = PyPDF2.PdfReader(uploaded_pdf)
+            st.session_state.pdf_text = "".join(page.extract_text() for page in pdf_reader.pages if page.extract_text())
+            st.success("✅ PDF loaded successfully!")
+        except:
+            st.error("⚠️ Could not read the PDF file.")
 
-# Text aur Image process karna
-pdf_text = ""
-if uploaded_pdf:
-    try:
-        pdf_reader = PyPDF2.PdfReader(uploaded_pdf)
-        pdf_text = "".join(page.extract_text() for page in pdf_reader.pages if page.extract_text())
-        st.sidebar.success("✅ PDF Load ho gayi!")
-    except Exception:
-        st.sidebar.error("⚠️ PDF read nahi ho paayi.")
-
-img_data = None
-if uploaded_img:
-    img_data = Image.open(uploaded_img)
-    st.sidebar.success("✅ Image Load ho gayi!")
-    st.sidebar.image(img_data, use_container_width=True)
-
-# Main Screen Logic
-if action == "💬 General Chat":
-    st.subheader("Mujhse padhai ka koi bhi sawal poocho!")
-    user_question = st.text_input("Sawal type karo...")
-    if st.button("Poocho"):
-        if user_question:
-            with st.spinner("Soch raha hoon..."):
-                try:
-                    context = f"Context from PDF:\n{pdf_text[:5000]}\n\n" if pdf_text else ""
-                    prompt = f"{context}User Question: {user_question}"
-                    if img_data:
-                        response = model.generate_content([prompt, img_data])
-                    else:
-                        response = model.generate_content(prompt)
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"⚠️ Error: {e}")
-        else:
-            st.warning("Pehle koi sawal likho!")
-
-elif action == "🖼️ Diagram Explain":
-    st.subheader("Diagram Explanation Tool")
-    if img_data:
-        if st.button("Samjhao"):
-            with st.spinner("Diagram padh raha hoon..."):
-                try:
-                    response = model.generate_content(["Explain this diagram in simple educational terms.", img_data])
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"⚠️ Error: {e}")
-    else:
-        st.info("👈 Pehle sidebar se koi diagram (image) upload karo.")
-
-elif action == "❓ Quiz Banao":
-    st.subheader("Practice Quiz Generator")
-    if pdf_text:
-        if st.button("Quiz Generate Karo"):
-            with st.spinner("Questions ban rahe hain..."):
-                try:
-                    response = model.generate_content(f"Create a 5-question multiple choice quiz with answers from this text:\n\n{pdf_text[:10000]}")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"⚠️ Error: {e}")
-    else:
-        st.info("👈 Pehle sidebar se notes (PDF) upload karo.")
-
-elif action == "🗂️ Flashcards Banao":
-    st.subheader("Smart Flashcards")
-    if pdf_text:
-        if st.button("Flashcards Generate Karo"):
-            with st.spinner("Flashcards ban rahe hain..."):
-                try:
-                    response = model.generate_content(f"Create 5 important flashcards with Question and Answer format from this text:\n\n{pdf_text[:10000]}")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"⚠️ Error: {e}")
-    else:
-        st.info("👈 Pehle sidebar se notes (PDF) upload karo.")
+    uploaded_img = st.file_uploader("🖼️ Upload Diagram (Image)", type=["png", "jpg", "jpeg"])
+    if uploaded_img:
+        st.session_state.img_data = Image.open(uploaded_img)
+        st.success("✅ Diagram loaded successfully!")
+        st.image(st.session_state.img_data, use_container_width=True)
         
+    st.divider()
+    st.header("⚙️ Smart Actions")
+    
+    # Sidebar buttons to trigger chat actions
+    btn_explain = st.button("🖼️ Explain Diagram")
+    btn_quiz = st.button("❓ Generate Quiz")
+    btn_flash = st.button("🗂️ Generate Flashcards")
+    btn_clear = st.button("🗑️ Clear Chat History")
+
+# Clear chat history logic
+if btn_clear:
+    st.session_state.messages = [{"role": "assistant", "content": "Chat history cleared! Ask a new question."}]
+    st.rerun()
+
+# 5. Main Chat Interface
+st.title("🎓 Smart AI Study Tutor")
+
+# Display previous chat history
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# 6. User Input or Sidebar Button Actions
+prompt = st.chat_input("Type your message here...")
+action_prompt = None
+
+if prompt:
+    action_prompt = prompt
+elif btn_explain:
+    action_prompt = "Explain my uploaded diagram in simple educational terms."
+elif btn_quiz:
+    action_prompt = "Generate a 5-question multiple-choice quiz with answers based on my uploaded PDF notes."
+elif btn_flash:
+    action_prompt = "Create 5 important Q&A flashcards based on my uploaded PDF notes."
+
+if action_prompt:
+    # Display user message and save to memory
+    st.session_state.messages.append({"role": "user", "content": action_prompt})
+    with st.chat_message("user"):
+        st.markdown(action_prompt)
+        
+    # Generate AI response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                # Provide context (PDF) and chat history to AI
+                context = f"Context from PDF:\n{st.session_state.pdf_text[:5000]}\n\n" if st.session_state.pdf_text else ""
+                history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.messages[-4:-1]]) # Last 3 messages
+                
+                full_prompt = f"You are a helpful, professional AI study tutor. Answer clearly and accurately in English.\n\n{context}\n\nRecent Chat History:\n{history_text}\n\nUser New Request: {action_prompt}"
+                
+                if st.session_state.img_data and (btn_explain or action_prompt == prompt):
+                    response = model.generate_content([full_prompt, st.session_state.img_data])
+                else:
+                    response = model.generate_content(full_prompt)
+                
+                st.markdown(response.text)
+                
+                # Save AI response to memory
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                
+            except Exception as e:
+                st.error(f"⚠️ Connection issue occurred. Please try again.")
+                
