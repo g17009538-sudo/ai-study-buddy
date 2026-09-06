@@ -7,12 +7,31 @@ from PIL import Image
 st.set_page_config(page_title="AI Study Tutor", page_icon="🎓", layout="wide")
 st.title("🎓 Smart AI Study Tutor")
 
-# Background se API Key lena
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-pro')
-except Exception as e:
+    api_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=api_key)
+    
+    # Smart Auto-Model Detector: Khud check karega konsa AI chalega
+    valid_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    
+    if not valid_models:
+        st.error("⚠️ Tumhari API Key se koi AI model nahi mil raha. Kripya aistudio.google.com se nayi key banayein.")
+        st.stop()
+        
+    # Best model select karna
+    best_model = valid_models[0]
+    for m_name in valid_models:
+        if '1.5-flash' in m_name:
+            best_model = m_name
+            break
+            
+    model = genai.GenerativeModel(best_model)
+
+except KeyError:
     st.error("⚠️ Background mein API key set nahi hai. Kripya Streamlit Secrets check karein.")
+    st.stop()
+except Exception as e:
+    st.error(f"⚠️ Connection Error: {e}. Agar yeh baar-baar aaye toh Google AI Studio se ek nayi API key bana kar Streamlit Secrets mein update karein.")
     st.stop()
 
 # Sidebar: Tools aur Uploads
@@ -28,9 +47,12 @@ with st.sidebar:
 # Text aur Image process karna
 pdf_text = ""
 if uploaded_pdf:
-    pdf_reader = PyPDF2.PdfReader(uploaded_pdf)
-    pdf_text = "".join(page.extract_text() for page in pdf_reader.pages if page.extract_text())
-    st.sidebar.success("✅ PDF Load ho gayi!")
+    try:
+        pdf_reader = PyPDF2.PdfReader(uploaded_pdf)
+        pdf_text = "".join(page.extract_text() for page in pdf_reader.pages if page.extract_text())
+        st.sidebar.success("✅ PDF Load ho gayi!")
+    except Exception:
+        st.sidebar.error("⚠️ PDF read nahi ho paayi.")
 
 img_data = None
 if uploaded_img:
@@ -45,16 +67,16 @@ if action == "💬 General Chat":
     if st.button("Poocho"):
         if user_question:
             with st.spinner("Soch raha hoon..."):
-                # Agar PDF hai, toh context add karo
-                context = f"Context from PDF:\n{pdf_text[:5000]}\n\n" if pdf_text else ""
-                prompt = f"{context}User Question: {user_question}"
-                
-                # Agar Image bhi hai toh dono bhejenge
-                if img_data:
-                    response = model.generate_content([prompt, img_data])
-                else:
-                    response = model.generate_content(prompt)
-                st.write(response.text)
+                try:
+                    context = f"Context from PDF:\n{pdf_text[:5000]}\n\n" if pdf_text else ""
+                    prompt = f"{context}User Question: {user_question}"
+                    if img_data:
+                        response = model.generate_content([prompt, img_data])
+                    else:
+                        response = model.generate_content(prompt)
+                    st.write(response.text)
+                except Exception as e:
+                    st.error(f"⚠️ Jawab dene mein problem aayi: {e}")
         else:
             st.warning("Pehle koi sawal likho!")
 
@@ -63,8 +85,11 @@ elif action == "🖼️ Diagram Explain":
     if img_data:
         if st.button("Samjhao"):
             with st.spinner("Diagram padh raha hoon..."):
-                response = model.generate_content(["Explain this diagram in simple educational terms.", img_data])
-                st.write(response.text)
+                try:
+                    response = model.generate_content(["Explain this diagram in simple educational terms.", img_data])
+                    st.write(response.text)
+                except Exception as e:
+                    st.error(f"⚠️ Error: {e}")
     else:
         st.info("👈 Pehle sidebar se koi diagram (image) upload karo.")
 
@@ -73,8 +98,11 @@ elif action == "❓ Quiz Banao":
     if pdf_text:
         if st.button("Quiz Generate Karo"):
             with st.spinner("Questions ban rahe hain..."):
-                response = model.generate_content(f"Create a 5-question multiple choice quiz with answers from this text:\n\n{pdf_text[:10000]}")
-                st.write(response.text)
+                try:
+                    response = model.generate_content(f"Create a 5-question multiple choice quiz with answers from this text:\n\n{pdf_text[:10000]}")
+                    st.write(response.text)
+                except Exception as e:
+                    st.error(f"⚠️ Error: {e}")
     else:
         st.info("👈 Pehle sidebar se notes (PDF) upload karo.")
 
@@ -83,7 +111,11 @@ elif action == "🗂️ Flashcards Banao":
     if pdf_text:
         if st.button("Flashcards Generate Karo"):
             with st.spinner("Flashcards ban rahe hain..."):
-                response = model.generate_content(f"Create 5 important flashcards with Question and Answer format from this text:\n\n{pdf_text[:10000]}")
-                st.write(response.text)
+                try:
+                    response = model.generate_content(f"Create 5 important flashcards with Question and Answer format from this text:\n\n{pdf_text[:10000]}")
+                    st.write(response.text)
+                except Exception as e:
+                    st.error(f"⚠️ Error: {e}")
     else:
         st.info("👈 Pehle sidebar se notes (PDF) upload karo.")
+        
