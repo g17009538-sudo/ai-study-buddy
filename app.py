@@ -10,7 +10,7 @@ st.title("🎓 Smart AI Study Tutor")
 # Background se API Key lena
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-pro')
 except Exception as e:
     st.error("⚠️ Background mein API key set nahi hai. Kripya Streamlit Secrets check karein.")
     st.stop()
