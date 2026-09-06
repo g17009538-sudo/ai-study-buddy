@@ -11,27 +11,14 @@ try:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
     
-    # Smart Auto-Model Detector: Khud check karega konsa AI chalega
-    valid_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    
-    if not valid_models:
-        st.error("⚠️ Tumhari API Key se koi AI model nahi mil raha. Kripya aistudio.google.com se nayi key banayein.")
-        st.stop()
-        
-    # Best model select karna
-    best_model = valid_models[0]
-    for m_name in valid_models:
-        if '1.5-flash' in m_name:
-            best_model = m_name
-            break
-            
-    model = genai.GenerativeModel(best_model)
+    # Error ke hisaab se ekdum latest aur working model yahan set kiya hai
+    model = genai.GenerativeModel('gemini-3.6-flash')
 
 except KeyError:
     st.error("⚠️ Background mein API key set nahi hai. Kripya Streamlit Secrets check karein.")
     st.stop()
 except Exception as e:
-    st.error(f"⚠️ Connection Error: {e}. Agar yeh baar-baar aaye toh Google AI Studio se ek nayi API key bana kar Streamlit Secrets mein update karein.")
+    st.error(f"⚠️ Error: {e}")
     st.stop()
 
 # Sidebar: Tools aur Uploads
@@ -76,7 +63,7 @@ if action == "💬 General Chat":
                         response = model.generate_content(prompt)
                     st.write(response.text)
                 except Exception as e:
-                    st.error(f"⚠️ Jawab dene mein problem aayi: {e}")
+                    st.error(f"⚠️ Error: {e}")
         else:
             st.warning("Pehle koi sawal likho!")
 
