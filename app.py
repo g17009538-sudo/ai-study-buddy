@@ -4,8 +4,8 @@ import PyPDF2
 from PIL import Image
 import datetime
 
-# 1. UI & Custom Theme
-st.set_page_config(page_title="AI Study Tutor", page_icon="🎓", layout="wide")
+# 1. UI Setup (Mobile Optimized)
+st.set_page_config(page_title="AI Study Tutor", page_icon="🎓", layout="centered")
 st.markdown("""
 <style>
     .stApp { background-color: #FEF5F0; }
@@ -13,9 +13,6 @@ st.markdown("""
     .stButton>button { border-radius: 8px; border: 1px solid #F48024; color: #F48024; width: 100%; font-weight: bold; }
     .stButton>button:hover { background-color: #F48024; color: white; }
     .strategy-box { background-color: white; padding: 20px; border-radius: 10px; border-left: 5px solid #F48024; margin-bottom: 15px; }
-    
-    /* Custom Chat Bar Styling */
-    .custom-chat-row { display: flex; align-items: center; gap: 10px; background: white; padding: 10px; border-radius: 30px; box-shadow: 0px 2px 10px rgba(0,0,0,0.1); margin-top: 20px;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -94,20 +91,18 @@ if app_mode == "📅 Exam Prep Mode":
                 st.session_state.wizard_step = 5
                 st.rerun()
 
-    # Step 5: Master Strategy -> True AI Flashcards -> True AI Quiz
+    # Step 5: Master Strategy, Flashcards & Quiz
     elif st.session_state.wizard_step == 5:
         st.subheader("📊 Your Master Strategy")
         st.markdown(f'<div class="strategy-box">{st.session_state.strategy_plan}</div>', unsafe_allow_html=True)
         
-        # Flashcards Generation
         if st.button("🗂️ Learn with Flashcards"):
-            with st.spinner("Generating Flashcards from your notes..."):
+            with st.spinner("Generating Flashcards..."):
                 prompt = f"Create 3 simple Q&A flashcards from this text: {st.session_state.context_text[:3000]}. Format strictly as:\nQ: [Question]\nA: [Answer]|Q: [Question]\nA: [Answer]"
                 res = model.generate_content(prompt).text
                 st.session_state.flashcard_data = res.split("|")
                 st.rerun()
 
-        # Display Flashcards
         if st.session_state.flashcard_data:
             st.divider()
             st.subheader("Flip Cards")
@@ -118,74 +113,68 @@ if app_mode == "📅 Exam Prep Mode":
                     with st.expander(f"🤔 {q}"):
                         st.success(f"💡 {a}")
             
-            # Quiz Generation (Only appears after Flashcards)
             if st.button("❓ Ready for Quiz"):
-                with st.spinner("Preparing a specific question..."):
+                with st.spinner("Preparing question..."):
                     prompt = f"Create 1 multiple choice question based on this text: {st.session_state.context_text[:3000]}. Format exactly like this:\nQuestion: [Q]\nOption A: [Opt]\nOption B: [Opt]\nOption C: [Opt]\nCorrect: [A, B, or C]"
-                    quiz_text = model.generate_content(prompt).text
-                    st.session_state.quiz_data = quiz_text
-                    st.session_state.quiz_answered = False
+                    st.session_state.quiz_data = model.generate_content(prompt).text
                     st.rerun()
 
-        # Display Quiz
         if st.session_state.quiz_data:
             st.divider()
             st.subheader("Knowledge Check")
             lines = st.session_state.quiz_data.split('\n')
-            question = next((l for l in lines if l.startswith("Question:")), "Question not found")
+            question = next((l for l in lines if l.startswith("Question:")), "Question")
             correct_ans = next((l for l in lines if l.startswith("Correct:")), "").replace("Correct:", "").strip()
             
             st.write(f"**{question.replace('Question:', '').strip()}**")
             
             opts = [l for l in lines if l.startswith("Option")]
-            c1, c2, c3 = st.columns(3)
-            cols = [c1, c2, c3]
-            
-            for i, opt in enumerate(opts[:3]):
+            for opt in opts[:3]:
                 opt_letter = opt.split(":")[0].replace("Option", "").strip()
-                if cols[i].button(opt):
+                if st.button(opt, key=opt_letter):
                     if opt_letter == correct_ans:
-                        st.success("✅ Correct! Excellent retention.")
+                        st.success("✅ Correct!")
                     else:
-                        st.error(f"❌ Incorrect. The right answer was {correct_ans}.")
+                        st.error(f"❌ Incorrect. Answer was {correct_ans}.")
                         
             if st.button("🏠 Return to Start"): reset_wizard(); st.rerun()
 
-# ----------------- MODE 2: CHAT & TOOLS (Custom UI Row) -----------------
+# ----------------- MODE 2: CHAT & TOOLS -----------------
 elif app_mode == "💬 Chat & Tools":
     st.title("🎓 Smart AI Study Tutor")
     
     # Chat History
-    chat_container = st.container()
-    with chat_container:
-        for msg in st.session_state.messages:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
     
-    st.write("")
-    st.write("")
-    
-    # Custom Integrated Input Row (Replacing st.chat_input)
-    col1, col2, col3 = st.columns([1, 8, 1])
-    with col1:
-        with st.popover("➕"):
+    # Clean Mobile Upload Section
+    with st.expander("📎 Add PDF, Image, or Voice Note"):
+        c1, c2 = st.columns(2)
+        with c1:
             up_pdf = st.file_uploader("Upload PDF", type="pdf")
-            if up_pdf: st.session_state.context_text = "".join(page.extract_text() for page in PyPDF2.PdfReader(up_pdf).pages if page.extract_text()); st.success("Loaded!")
-    with col2:
-        user_query = st.text_input("Ask Gemini...", label_visibility="collapsed")
-    with col3:
-        voice_input = st.audio_input("Mic", label_visibility="collapsed")
+            if up_pdf: st.session_state.context_text = "".join(page.extract_text() for page in PyPDF2.PdfReader(up_pdf).pages if page.extract_text()); st.success("PDF Loaded!")
+        with c2:
+            up_img = st.file_uploader("Upload Image", type=["png", "jpg"])
+            if up_img: st.session_state.img_data = Image.open(up_img); st.success("Image Loaded!")
+        voice_input = st.audio_input("Record Voice Note")
 
-    final_query = user_query if user_query else ("Please answer my voice note" if voice_input else None)
+    # Native Mobile Chat Input
+    prompt = st.chat_input("Ask Gemini...")
+    final_query = prompt if prompt else ("Please answer my voice note" if voice_input else None)
 
     if final_query:
         st.session_state.messages.append({"role": "user", "content": final_query})
-        st.rerun() # Forces the chat to update, the processing will happen on next render
-
-    # AI Processing Logic (Triggers after rerun if last message is user)
-    if st.session_state.messages[-1]["role"] == "user":
-        with st.spinner("Analyzing..."):
-            sys_prompt = f"Answer clearly. Context: {st.session_state.context_text[:4000]}\nQuery: {st.session_state.messages[-1]['content']}"
-            response = model.generate_content(sys_prompt)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
-            st.rerun()
+        with st.chat_message("user"):
+            st.markdown(final_query)
+            
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    sys_prompt = f"Answer clearly. Context: {st.session_state.context_text[:4000]}\nQuery: {final_query}"
+                    response = model.generate_content([sys_prompt, st.session_state.img_data]) if st.session_state.img_data else model.generate_content(sys_prompt)
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                except Exception as e:
+                    st.error(f"Error: {e}")
+                    
