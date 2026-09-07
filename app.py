@@ -5,9 +5,8 @@ from PIL import Image
 import datetime
 from youtube_transcript_api import YouTubeTranscriptApi
 
-# App UI & Custom Design
+# UI & Custom Theme
 st.set_page_config(page_title="AI Study Tutor", page_icon="🎓", layout="wide")
-
 st.markdown("""
 <style>
     .stApp { background-color: #FEF5F0; }
@@ -22,14 +21,20 @@ try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel('gemini-3.6-flash')
 except Exception:
-    st.error("⚠️ API key is missing in Streamlit Secrets.")
+    st.error("⚠️ API key missing.")
     st.stop()
 
-# Session States for Memory & Gamification
+# Session States
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Hi! Main tumhara AI Tutor hoon. Kuch upload karo ya seedha sawaal poocho! 😊"}]
-if "score" not in st.session_state:
-    st.session_state.score = 0
+    st.session_state.messages = [{"role": "assistant", "content": "Hi! Main tumhara AI Tutor hoon. 😊"}]
+if "wizard_step" not in st.session_state:
+    st.session_state.wizard_step = 1
+if "exam_sub" not in st.session_state:
+    st.session_state.exam_sub = ""
+if "exam_date" not in st.session_state:
+    st.session_state.exam_date = datetime.date.today()
+if "target_score" not in st.session_state:
+    st.session_state.target_score = 80
 if "study_plan" not in st.session_state:
     st.session_state.study_plan = None
 if "context_text" not in st.session_state:
@@ -37,87 +42,124 @@ if "context_text" not in st.session_state:
 if "img_data" not in st.session_state:
     st.session_state.img_data = None
 
-# Sidebar: Gamification & Settings
+def next_step(step):
+    st.session_state.wizard_step = step
+
+def set_subject(sub):
+    st.session_state.exam_sub = sub
+    st.session_state.wizard_step = 2
+
+# Sidebar Menu
 with st.sidebar:
-    st.metric(label="🔥 Study Streak & Points", value=f"{st.session_state.score} XP")
+    app_mode = st.radio("Navigation", ["💬 Chat & Tools", "📅 Exam Prep Wizard"])
     st.divider()
-    app_mode = st.radio("Mode Select Karo:", ["💬 Chat & Tools", "📅 Exam Prep Wizard"])
-    st.divider()
-    pref_lang = st.selectbox("Language / Bhasha:", ["English", "Hinglish", "Hindi", "Telugu"])
-    if st.button("🗑️ Clear Chat History"):
-        st.session_state.messages = [{"role": "assistant", "content": "Chat cleared!"}]
-        st.rerun()
-
-st.title("🎓 Smart AI Study Tutor")
-
-# Mode 1: Exam Prep Wizard (Animated & Boxed)
-if app_mode == "📅 Exam Prep Wizard":
-    st.subheader("Interactive Exam Planner")
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        exam_subject = st.text_input("Subject", placeholder="e.g., JEE Main Physics")
-    with col2:
-        exam_date = st.date_input("Exam Date", min_value=datetime.date.today())
-    with col3:
-        target_score = st.text_input("Target Score", placeholder="e.g., 250+ or 95%")
+    st.subheader("📺 Add YouTube Video")
+    yt_link = st.text_input("Paste YouTube Link")
+    if st.button("Process Video"):
+        try:
+            video_id = yt_link.split("v=")[1][:11]
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            st.session_state.context_text = " ".join([t['text'] for t in transcript])
+            st.success("Video processed!")
+        except:
+            st.error("Invalid link.")
+
+# ----------------- MODE 1: EXAM PREP WIZARD -----------------
+if app_mode == "📅 Exam Prep Wizard":
+    st.title("Interactive Exam Planner")
+    
+    # Step 1: Subject
+    if st.session_state.wizard_step == 1:
+        st.subheader("Step 1: Choose a subject")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.button("📐 Math", use_container_width=True, on_click=set_subject, args=("Math",))
+            st.button("🧪 Chemistry", use_container_width=True, on_click=set_subject, args=("Chemistry",))
+        with col2:
+            st.button("💡 Physics", use_container_width=True, on_click=set_subject, args=("Physics",))
+            st.button("💻 Computer Science", use_container_width=True, on_click=set_subject, args=("Computer Science",))
         
-    if st.button("🚀 Create Path"):
-        if not st.session_state.context_text:
-            st.warning("Pehle Chat mode mein jaakar '+' icon se notes ya video upload karo!")
-        elif exam_subject:
-            days_left = (exam_date - datetime.date.today()).days
-            with st.spinner("Analyzing syllabus... Creating your personalized path..."):
-                prompt = f"Create a day-by-day study plan for {exam_subject} exam in {days_left} days. Target: {target_score}. Use this context: {st.session_state.context_text[:3000]}. Format EXACTLY like this: 'DAY 1: Topic Name - Details|DAY 2: Topic Name - Details'."
+        custom_sub = st.text_input("Or type your subject:")
+        if st.button("Continue", type="primary"):
+            if custom_sub:
+                set_subject(custom_sub)
+    
+    # Step 2: Date
+    elif st.session_state.wizard_step == 2:
+        st.subheader(f"Step 2: When is your {st.session_state.exam_sub} exam?")
+        st.session_state.exam_date = st.date_input("Select Date", min_value=datetime.date.today())
+        col1, col2 = st.columns([1, 10])
+        col1.button("Back", on_click=next_step, args=(1,))
+        col2.button("Next", on_click=next_step, args=(3,))
+        
+    # Step 3: Target Score
+    elif st.session_state.wizard_step == 3:
+        st.subheader("Step 3: What is your target score?")
+        st.session_state.target_score = st.slider("Expected Marks (%)", 0, 100, 80)
+        col1, col2 = st.columns([1, 10])
+        col1.button("Back", on_click=next_step, args=(2,))
+        col2.button("Next", on_click=next_step, args=(4,))
+        
+    # Step 4: Upload & Generate
+    elif st.session_state.wizard_step == 4:
+        st.subheader("Step 4: Add your study material")
+        up_pdf = st.file_uploader("Upload Notes (PDF)", type="pdf")
+        
+        col1, col2 = st.columns([1, 10])
+        col1.button("Back", on_click=next_step, args=(3,))
+        
+        if col2.button("🚀 Create Path"):
+            if up_pdf:
+                st.session_state.context_text = "".join(page.extract_text() for page in PyPDF2.PdfReader(up_pdf).pages if page.extract_text())
+            
+            days_left = (st.session_state.exam_date - datetime.date.today()).days
+            with st.spinner("Analyzing material... Creating path..."):
+                prompt = f"Create a day-by-day study plan for {st.session_state.exam_sub} exam in {days_left} days. Target: {st.session_state.target_score}%. Format EXACTLY like this: 'DAY 1: Topic Name - Details|DAY 2: Topic Name - Details'."
                 response = model.generate_content(prompt)
                 st.session_state.study_plan = response.text.split('|')
+                st.session_state.wizard_step = 5
                 st.rerun()
-
-    # Show Day-by-Day Boxes with Checkboxes
-    if st.session_state.study_plan:
-        st.markdown("### 🗓️ Your Custom Study Plan")
+                
+    # Step 5: Dashboard Boxes
+    elif st.session_state.wizard_step == 5:
+        st.subheader(f"🗓️ Your {st.session_state.exam_sub} Study Plan")
         for i, day_task in enumerate(st.session_state.study_plan):
             if day_task.strip():
                 st.markdown(f'<div class="study-box">{day_task}</div>', unsafe_allow_html=True)
-                if st.checkbox(f"✅ Mark Day {i+1} as Done", key=f"day_{i}"):
-                    st.session_state.score += 10
+                st.checkbox(f"✅ Mark Day {i+1} as Done", key=f"day_{i}")
+        if st.button("🔄 Restart Planner"):
+            st.session_state.wizard_step = 1
+            st.rerun()
 
-# Mode 2: Chat & Tools (With "+" Icon and Voice)
+# ----------------- MODE 2: CHAT & TOOLS -----------------
 elif app_mode == "💬 Chat & Tools":
+    st.title("🎓 Smart AI Study Tutor")
+    
+    # Display Chat History
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             
-    # Layout for Chat Input and + Icon
-    chat_col, plus_col = st.columns([8, 1])
+    st.write("") # Spacing
     
-    with plus_col:
-        with st.popover("➕ Add"):
-            st.write("Upload Material")
+    # Quick Action Row right above Chat Input
+    col1, col2, col3 = st.columns([1, 2, 7])
+    with col1:
+        with st.popover("➕ Upload"):
             up_pdf = st.file_uploader("📝 PDF Notes", type="pdf")
             if up_pdf:
                 st.session_state.context_text = "".join(page.extract_text() for page in PyPDF2.PdfReader(up_pdf).pages if page.extract_text())
                 st.success("PDF Saved!")
-                
             up_img = st.file_uploader("🖼️ Diagram", type=["png", "jpg"])
             if up_img:
                 st.session_state.img_data = Image.open(up_img)
                 st.success("Image Saved!")
-                
-            yt_link = st.text_input("📺 YouTube Link")
-            if yt_link:
-                try:
-                    video_id = yt_link.split("v=")[1][:11]
-                    transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                    st.session_state.context_text = " ".join([t['text'] for t in transcript])
-                    st.success("Video Subtitles Saved!")
-                except:
-                    st.error("Video load nahi hui.")
-
-    with chat_col:
-        prompt = st.chat_input("Type a question...")
-        voice_input = st.audio_input("Or send a voice note:")
-
+    with col2:
+        voice_input = st.audio_input("🎤 Voice")
+    
+    # Text Chat Input
+    prompt = st.chat_input("Ask Gemini...")
     user_query = prompt if prompt else ("Please answer my voice note" if voice_input else None)
 
     if user_query:
@@ -128,8 +170,7 @@ elif app_mode == "💬 Chat & Tools":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
-                    sys_prompt = f"Answer in {pref_lang}. Context: {st.session_state.context_text[:4000]}\nHistory: {st.session_state.messages[-3:]}\nQuery: {user_query}"
-                    
+                    sys_prompt = f"Answer clearly. Context: {st.session_state.context_text[:4000]}\nQuery: {user_query}"
                     if st.session_state.img_data:
                         response = model.generate_content([sys_prompt, st.session_state.img_data])
                     else:
@@ -138,5 +179,5 @@ elif app_mode == "💬 Chat & Tools":
                     st.markdown(response.text)
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                 except Exception as e:
-                    st.error(f"⚠️ Asli Error: {e}")
-    
+                    st.error(f"⚠️ Error: {e}")
+                    
