@@ -4,52 +4,60 @@ import PyPDF2
 from PIL import Image
 import datetime
 
-# --- 1. CONFIGURATION & ASTRA-INSPIRED STYLING ---
-st.set_page_config(page_title="VeDA - Next-Gen AI Tutor", page_icon="🎓", layout="centered")
+# --- 1. ASTRA-INSPIRED MOBILE APP CONFIG & STYLING ---
+st.set_page_config(page_title="VeDA - Astra Edition", page_icon="🎓", layout="centered")
 
 st.markdown("""
 <style>
+    /* Astra Deep Dark Theme */
     .stApp { 
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); 
+        background-color: #0b0f19; 
         color: #f8fafc; 
-        font-family: 'Inter', sans-serif; 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
     }
     [data-testid="stSidebar"] { 
-        background-color: #090d16; 
-        border-right: 1px solid rgba(244, 128, 36, 0.3); 
+        background-color: #07090e; 
+        border-right: 1px solid #1f2937; 
     }
+    /* Astra Rounded Dark Cards & Buttons */
     .stButton>button { 
-        border-radius: 12px; 
-        border: 1px solid #f48024; 
+        border-radius: 16px; 
+        border: 1px solid #1f2937; 
         color: #ffffff; 
-        background: linear-gradient(90deg, #f48024 0%, #ea580c 100%);
+        background-color: #131b2e;
         width: 100%; 
-        font-weight: 600; 
-        padding: 10px; 
-        box-shadow: 0 4px 12px rgba(244,128,36,0.3);
+        font-weight: 500; 
+        padding: 14px; 
+        text-align: left;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        transition: all 0.2s ease-in-out;
     }
     .stButton>button:hover { 
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(244,128,36,0.5);
+        border-color: #f48024;
+        background-color: #1e293b;
     }
-    .veda-card { 
-        background: rgba(255, 255, 255, 0.05); 
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 24px; 
-        border-radius: 16px; 
-        border-left: 6px solid #f48024; 
-        margin-bottom: 20px; 
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    /* Primary Action Buttons */
+    .primary-btn button {
+        background: linear-gradient(135deg, #f48024 0%, #ea580c 100%) !important;
+        border: none !important;
+        text-align: center !important;
+        font-weight: 700 !important;
+    }
+    .astra-card { 
+        background: #131b2e; 
+        border: 1px solid #1f2937;
+        padding: 20px; 
+        border-radius: 20px; 
+        margin-bottom: 15px; 
     }
     .hero-title {
-        background: linear-gradient(90deg, #f48024, #fb923c);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 800;
-        font-size: 3rem;
-        text-align: center;
+        font-weight: 700;
+        font-size: 2rem;
+        color: #ffffff;
     }
+    /* Hide default Streamlit branding for clean mobile look */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -60,19 +68,19 @@ except Exception:
     st.error("⚠️ API key missing in Streamlit Secrets.")
     st.stop()
 
-# --- 2. ADVANCED SESSION STATE ENGINE ---
+# --- 2. ADVANCED SESSION STATE ---
 default_states = {
     "app_nav": "Home",
-    "messages": [{"role": "assistant", "content": "Greetings! I am **VeDA**, your elite AI study mentor. Let's conquer your academic goals together."}],
+    "messages": [{"role": "assistant", "content": "Hello Gourav, welcome! 👋 I am VeDA, your AI academic mentor."}],
     "wizard_step": 1, 
     "exam_sub": "", 
+    "exam_timing": "",
     "exam_date": datetime.date.today(), 
-    "target_score": 90,
-    "edu_level": "Secondary stage (grades 9-12)",
-    "grade": "10. grade",
+    "target_score": 85,
+    "edu_level": "",
+    "grade": "",
     "strategy_plan": "", 
     "context_text": "", 
-    "img_data": None,
     "flashcard_data": [], 
     "quiz_data": None
 }
@@ -85,153 +93,181 @@ def change_step(step): st.session_state.wizard_step = step
 def set_subject(sub): 
     st.session_state.exam_sub = sub
     st.session_state.wizard_step = 2
-def reset_veda():
-    st.session_state.wizard_step = 1
-    st.session_state.flashcard_data = []
-    st.session_state.quiz_data = None
-    st.session_state.strategy_plan = ""
 
-# --- 3. SIDEBAR NAVIGATION ---
+# --- 3. BOTTOM MOBILE NAVIGATION BAR SIMULATION ---
 with st.sidebar:
-    st.markdown("### 🎓 **VeDA Control Center**")
+    st.markdown("### 🧭 **VeDA Navigation**")
+    if st.button("🏠 Home / Dashboard"): navigate_to("Home")
+    if st.button("🎯 Exam Prep Wizard"): navigate_to("Wizard")
+    if st.button("💬 VeDA Chat"): navigate_to("Chat")
     st.divider()
-    if st.button("🏠 Command Hub"): navigate_to("Home")
-    if st.button("🚀 Exam Wizard Mode"): navigate_to("Wizard")
-    if st.button("💬 VeDA Neural Chat"): navigate_to("Chat")
-    st.divider()
-    if st.button("🧹 Clear Core Memory"):
+    if st.button("🔄 Reset App State"):
         for k, v in default_states.items(): st.session_state[k] = v
         st.rerun()
 
-# --- 4. COMMAND HUB (HOME SCREEN) ---
+# --- 4. HOME SCREEN (ASTRA STYLE) ---
 if st.session_state.app_nav == "Home":
-    st.markdown('<br>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-title">VeDA AI</div>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94a3b8; font-size: 1.1rem;'>The Ultimate Next-Gen Learning Ecosystem rivaling Astra AI</p>", unsafe_allow_html=True)
-    st.markdown('<br>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<p style="color: #94a3b8; font-size: 0.9rem;">🔥 BACK TO SCHOOL DEAL: Save 67% with VeDA Plus</p>', unsafe_allow_html=True)
+    st.markdown('<p class="hero-title">Hello Gourav, welcome! 👋</p>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        <div class="veda-card">
-            <h3>📅 Exam Prep Wizard</h3>
-            <p style='color: #cbd5e1;'>Custom roadmap creation, timeline matching, target scoring, and active recall modules.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Launch Exam Wizard"):
-            navigate_to("Wizard")
-            st.rerun()
-            
-    with col2:
-        st.markdown("""
-        <div class="veda-card">
-            <h3>💬 Neural Study Chat</h3>
-            <p style='color: #cbd5e1;'>Engage in deep-dive academic discussions, parse dense research PDFs, and utilize voice notes.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Open Neural Chat"):
-            navigate_to("Chat")
-            st.rerun()
-
-# --- 5. EXAM PREP WIZARD MODE (ASTRA-STYLE FLOW) ---
-elif st.session_state.app_nav == "Wizard":
-    st.title("🎯 VeDA Intelligent Exam Planner")
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    # Step 1: Subject Selection (Grid layout matching video)
-    if st.session_state.wizard_step == 1:
-        st.markdown("#### Choose a subject")
-        c1, c2 = st.columns(2)
-        c1.button("📐 Math", on_click=set_subject, args=("Math",))
-        c2.button("💡 Physics", on_click=set_subject, args=("Physics",))
-        c1.button("🧪 Chemistry", on_click=set_subject, args=("Chemistry",))
-        c2.button("💻 Computer Science", on_click=set_subject, args=("Computer Science",))
-        c1.button("📚 English", on_click=set_subject, args=("English",))
-        c2.button("🧬 Biology", on_click=set_subject, args=("Biology",))
+    # Hero Card matching Astra's "Prepare for your Exams with AI"
+    st.markdown("""
+    <div class="astra-card" style="text-align: center; background: radial-gradient(circle, #1e293b 0%, #131b2e 100%);">
+        <h3>🎓 Prepare for your Exams with AI</h3>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Generate intelligent roadmaps, master concepts via active recall, and test yourself.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("➕ Create new exam", type="primary"):
+        st.session_state.wizard_step = 1
+        navigate_to("Wizard")
+        st.rerun()
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        custom_sub = st.text_input("Type your subject or add custom:")
-        if st.button("Continue with Custom Subject") and custom_sub:
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("💬 Jump to Neural Chat"):
+        navigate_to("Chat")
+        st.rerun()
+
+# --- 5. EXAM PREP WIZARD (EXACT ASTRA FLOW) ---
+elif st.session_state.app_nav == "Wizard":
+    
+    # Step 1: Choose a subject (Grid matching video)
+    if st.session_state.wizard_step == 1:
+        st.markdown("### Choose a subject")
+        custom_sub = st.text_input("Type your subject", placeholder="Search subject...")
+        
+        if st.button("➕ Add your subject") and custom_sub:
             set_subject(custom_sub)
             st.rerun()
             
-    # Step 2: Exam Timeline Date Picker
-    elif st.session_state.wizard_step == 2:
-        st.markdown(f"#### When is your {st.session_state.exam_sub} exam?")
+        st.markdown("<p style='color: #94a3b8; font-size: 0.85rem; margin-top: 10px;'>General subjects</p>", unsafe_allow_html=True)
         
-        col_t1, col_t2 = st.columns(2)
-        if col_t1.button("⚡ Tomorrow"):
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📐 Math"): set_subject("Math")
+            if st.button("🧪 Chemistry"): set_subject("Chemistry")
+            if st.button("📚 English"): set_subject("English")
+            if st.button("🌍 Spanish"): set_subject("Spanish")
+            if st.button("🧬 Biology"): set_subject("Biology")
+            if st.button("📜 History"): set_subject("History")
+        with col2:
+            if st.button("💡 Physics"): set_subject("Physics")
+            if st.button("💻 Computer Science"): set_subject("Computer Science")
+            if st.button("🇩🇪 German"): set_subject("German")
+            if st.button("🇫🇷 French"): set_subject("French")
+            if st.button("🗺️ Geography"): set_subject("Geography")
+            if st.button("🏛️ Economics"): set_subject("Economics")
+
+    # Step 2: When is your exam? (Timeline options matching video)
+    elif st.session_state.wizard_step == 2:
+        st.markdown(f"### When is your {st.session_state.exam_sub} exam?")
+        
+        if st.button("🚨 Tomorrow"):
+            st.session_state.exam_timing = "Tomorrow"
             st.session_state.exam_date = datetime.date.today() + datetime.timedelta(days=1)
             change_step(3)
             st.rerun()
-        if col_t2.button("⚡ In 2 days"):
+        if st.button("⚡ In 2 days"):
+            st.session_state.exam_timing = "In 2 days"
             st.session_state.exam_date = datetime.date.today() + datetime.timedelta(days=2)
             change_step(3)
             st.rerun()
+        if st.button("⚡ In 3 days"):
+            st.session_state.exam_timing = "In 3 days"
+            st.session_state.exam_date = datetime.date.today() + datetime.timedelta(days=3)
+            change_step(3)
+            st.rerun()
+        if st.button("📅 Next few days"):
+            st.session_state.exam_timing = "Next few days"
+            st.session_state.exam_date = datetime.date.today() + datetime.timedelta(days=7)
+            change_step(3)
+            st.rerun()
             
-        st.markdown("Or pick a custom date:")
-        st.session_state.exam_date = st.date_input("Select Date", min_value=datetime.date.today())
+        st.markdown("<p style='text-align: center; color: #94a3b8;'>Or</p>", unsafe_allow_html=True)
+        st.session_state.exam_date = st.date_input("Pick a date", min_value=datetime.date.today())
         
-        c1, c2 = st.columns(2)
-        c1.button("⬅️ Back", on_click=change_step, args=(1,))
-        c2.button("Continue ➡️", on_click=change_step, args=(3,))
-        
-    # Step 3: Target Score Slider
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬅️ Back"): change_step(1)
+        with col2:
+            if st.button("Continue", type="primary"): change_step(3)
+
+    # Step 3: Target Score / Mastery Goal Slider
     elif st.session_state.wizard_step == 3:
-        st.markdown("#### What is your target score? (Mastery Goal)")
-        st.session_state.target_score = st.slider("Target Mastery (%)", 50, 100, 90)
-        c1, c2 = st.columns(2)
-        c1.button("⬅️ Back", on_click=change_step, args=(2,))
-        c2.button("Continue ➡️", on_click=change_step, args=(4,))
+        st.markdown("### What is your target score?")
+        st.markdown("<p style='color: #94a3b8; font-size: 0.9rem;'>Mastery goal percentage</p>", unsafe_allow_html=True)
         
-    # Step 4: School Details & Profile Confirmation
+        st.session_state.target_score = st.slider("Target Score", 50, 100, 85, label_visibility="collapsed")
+        st.markdown(f"<h1 style='text-align: center; color: #f48024;'>{st.session_state.target_score}%</h1>", unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬅️ Back"): change_step(2)
+        with col2:
+            if st.button("Continue", type="primary"): change_step(4)
+
+    # Step 4: School Details & Education Level
     elif st.session_state.wizard_step == 4:
-        st.markdown("#### Confirm your school details")
-        st.session_state.edu_level = st.selectbox("Which level of education are you in?", [
+        st.markdown("### Confirm your school details")
+        st.text_input("Search school", placeholder="Type school name...")
+        
+        st.markdown("<p style='color: #94a3b8; font-size: 0.9rem;'>Which level of education are you in?</p>", unsafe_allow_html=True)
+        edu_options = [
             "Foundational stage - primary grades 1-2",
             "Preparatory stage (grades 3-5)",
             "Middle stage (grades 6-8)",
             "Secondary stage (grades 9-12)",
             "Vocational / skill education",
             "University / higher education"
-        ])
-        st.session_state.grade = st.selectbox("Which grade are you in?", ["9. grade", "10. grade", "11. grade", "12. grade"])
+        ]
+        selected_edu = st.radio("Education Level", edu_options, label_visibility="collapsed")
+        st.session_state.edu_level = selected_edu
         
-        c1, c2 = st.columns(2)
-        c1.button("⬅️ Back", on_click=change_step, args=(3,))
-        c2.button("Continue to Upload ➡️", on_click=change_step, args=(5,))
+        st.markdown("<p style='color: #94a3b8; font-size: 0.9rem;'>Which grade are you in?</p>", unsafe_allow_html=True)
+        grade_options = ["9. grade", "10. grade", "11. grade", "12. grade"]
+        selected_grade = st.radio("Grade", grade_options, label_visibility="collapsed")
+        st.session_state.grade = selected_grade
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬅️ Back"): change_step(3)
+        with col2:
+            if st.button("Continue to Upload", type="primary"): change_step(5)
 
-    # Step 5: Upload Notes & Strategy Generation
+    # Step 5: Upload Notes & Generate Master Strategy
     elif st.session_state.wizard_step == 5:
-        st.markdown("#### Upload your study material / notes")
-        up_pdf = st.file_uploader("Upload Notes (.PDF)", type="pdf")
+        st.markdown("### Upload your study notes")
+        up_pdf = st.file_uploader("Upload PDF material", type="pdf")
         
-        c1, c2 = st.columns(2)
-        c1.button("⬅️ Back", on_click=change_step, args=(4,))
-        
-        if c2.button("🚀 Generate Master Strategy"):
-            if up_pdf:
-                try:
-                    reader = PyPDF2.PdfReader(up_pdf)
-                    raw_text = "".join(page.extract_text() for page in reader.pages if page.extract_text())
-                    st.session_state.context_text = raw_text[:3000] if raw_text else "No extractable text."
-                except Exception as e:
-                    st.error(f"Error reading PDF: {e}")
-            
-            days_remaining = max(1, (st.session_state.exam_date - datetime.date.today()).days)
-            with st.spinner("VeDA is building your custom exam blueprint..."):
-                prompt = f"Act as an elite academic director. Create a high-impact study strategy for {st.session_state.exam_sub} in {days_remaining} days targeting {st.session_state.target_score}%. Context material: {st.session_state.context_text}. Provide structural headings: 'Core Focus Pillars', 'Daily Execution Rhythm', and 'Pitfalls to Avoid'."
-                response = model.generate_content(prompt)
-                st.session_state.strategy_plan = response.text
-                st.session_state.wizard_step = 6
-                st.rerun()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬅️ Back"): change_step(4)
+        with col2:
+            if st.button("🚀 Generate Blueprint", type="primary"):
+                if up_pdf:
+                    try:
+                        reader = PyPDF2.PdfReader(up_pdf)
+                        raw_text = "".join(page.extract_text() for page in reader.pages if page.extract_text())
+                        st.session_state.context_text = raw_text[:3000] if raw_text else "General curriculum notes."
+                    except Exception as e:
+                        st.error(f"Error reading PDF: {e}")
+                
+                with st.spinner("VeDA AI is compiling your master strategy..."):
+                    prompt = f"Act as an elite academic director. Create a high-impact study strategy for {st.session_state.exam_sub} targeting {st.session_state.target_score}%. Grade level: {st.session_state.grade}. Context: {st.session_state.context_text}. Provide structural headings: 'Core Focus Pillars', 'Daily Execution Rhythm', and 'Key Formulas'."
+                    response = model.generate_content(prompt)
+                    st.session_state.strategy_plan = response.text
+                    st.session_state.wizard_step = 6
+                    st.rerun()
 
     # Step 6: Strategy Dashboard, Flashcards & Quiz
     elif st.session_state.wizard_step == 6:
         st.markdown(f"### 📊 Master Blueprint: {st.session_state.exam_sub}")
-        st.markdown(f'<div class="veda-card">{st.session_state.strategy_plan}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="astra-card">{st.session_state.strategy_plan}</div>', unsafe_allow_html=True)
         
-        col_f, col_q = st.columns(2)
-        if col_f.button("🗂️ Generate Smart Flashcards"):
+        if st.button("🗂️ Generate Smart Flashcards"):
             with st.spinner("Synthesizing flashcards..."):
                 fc_prompt = f"Extract 3 high-yield Q&A pairs from: {st.session_state.context_text}. Format strictly as Q: [Question] | A: [Answer] separated by lines."
                 res = model.generate_content(fc_prompt).text
@@ -271,56 +307,45 @@ elif st.session_state.app_nav == "Wizard":
                     if opt_letter == correct_key:
                         st.success("✅ Correct! Absolute precision.")
                     else:
-                        st.error(f"❌ Incorrect. The correct validation key is {correct_key}.")
+                        st.error(f"❌ Incorrect. The correct key is {correct_key}.")
                         
         st.markdown("---")
-        if st.button("🏠 Complete & Return to Hub"):
-            reset_veda()
+        if st.button("🏠 Return to Home"):
             navigate_to("Home")
             st.rerun()
 
-# --- 6. CHAT WITH VEDA MODE ---
+# --- 6. NEURAL CHAT WITH VEDA ---
 elif st.session_state.app_nav == "Chat":
-    st.title("💬 VeDA Neural Workspace")
+    st.markdown("### 💬 VeDA Neural Workspace")
     
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             
-    with st.expander("📎 Ingest Context (PDF, Image, or Audio)"):
-        c1, c2 = st.columns(2)
-        with c1:
-            up_pdf = st.file_uploader("Document Ingestion (.PDF)", type="pdf")
-            if up_pdf:
-                try:
-                    reader = PyPDF2.PdfReader(up_pdf)
-                    raw_text = "".join(page.extract_text() for page in reader.pages if page.extract_text())
-                    st.session_state.context_text = raw_text[:2500] if raw_text else ""
-                    st.success("PDF knowledge indexed successfully.")
-                except Exception as e:
-                    st.error(f"Error: {e}")
-        with c2:
-            up_img = st.file_uploader("Visual Ingestion (.PNG/.JPG)", type=["png", "jpg"])
-            if up_img:
-                st.session_state.img_data = Image.open(up_img)
-                st.success("Visual diagram buffered.")
-        voice_query = st.audio_input("Or transmit Voice Inquiry")
+    with st.expander("📎 Ingest Context (PDF / Image)"):
+        up_pdf = st.file_uploader("Document Ingestion (.PDF)", type="pdf")
+        if up_pdf:
+            try:
+                reader = PyPDF2.PdfReader(up_pdf)
+                raw_text = "".join(page.extract_text() for page in reader.pages if page.extract_text())
+                st.session_state.context_text = raw_text[:2500] if raw_text else ""
+                st.success("PDF knowledge indexed successfully.")
+            except Exception as e:
+                st.error(f"Error: {e}")
 
-    prompt = st.chat_input("Consult VeDA...")
-    active_query = prompt if prompt else ("Please evaluate my audio buffer submission." if voice_query else None)
-
-    if active_query:
-        st.session_state.messages.append({"role": "user", "content": active_query})
+    prompt = st.chat_input("Ask VeDA...")
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
-            st.markdown(active_query)
+            st.markdown(prompt)
             
         with st.chat_message("assistant"):
             with st.spinner("VeDA is thinking..."):
                 try:
-                    sys_prompt = f"You are VeDA, an elite AI educational architecture. Deliver crisp answers. Context: {st.session_state.context_text[:3000]}\nQuery: {active_query}"
-                    response = model.generate_content([sys_prompt, st.session_state.img_data]) if st.session_state.img_data else model.generate_content(sys_prompt)
+                    sys_prompt = f"You are VeDA, an elite AI educational architecture. Context: {st.session_state.context_text[:3000]}\nQuery: {prompt}"
+                    response = model.generate_content(sys_prompt)
                     st.markdown(response.text)
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                 except Exception as e:
-                    st.error(f"Neural processing exception: {e}")
-    
+                    st.error(f"Error: {e}")
+                    
