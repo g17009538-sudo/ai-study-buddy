@@ -1,4 +1,5 @@
-streamlit
+streamlit>=1.36.0
 google-generativeai>=0.8.2
 PyPDF2
 Pillow
+youtube-transcript-api
