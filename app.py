@@ -1,8 +1,9 @@
-mport streamlit as st
+import streamlit as st
 import google.generativeai as genai
 import PyPDF2
 from PIL import Image
 import datetime
+
 
 # --- 1. CONFIGURATION & ASTRA-GRADE STYLING ---
 st.set_page_config(page_title="VeDA - Next-Gen AI Tutor", page_icon="🎓", layout="centered")
